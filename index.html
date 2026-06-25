@@ -15,8 +15,10 @@
         button.success { background-color: #34c759; }
         button.danger { background-color: #ff3b30; }
         .odds-list { list-style: none; padding: 0; margin: 0; }
-        .odds-list li { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .odds-list li { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 15px; }
         .odds-list li:last-child { border-bottom: none; }
+        .score-badge { background-color: #333; color: white; padding: 4px 8px; border-radius: 6px; font-weight: bold; margin-right: 8px; }
+        .user-names { color: #555; font-weight: 500; }
         #share-section { margin-top: 15px; padding: 15px; background-color: #e8f0fe; border-radius: 8px; text-align: center; word-break: break-all; }
         .hidden { display: none !important; }
     </style>
@@ -55,7 +57,7 @@
         </div>
 
         <div class="box">
-            <h3 style="margin-top: 0; font-size: 16px;">📊 실시간 배당률</h3>
+            <h3 style="margin-top: 0; font-size: 16px;">📊 실시간 스코어별 참여 현황</h3>
             <ul id="odds-container" class="odds-list">
                 <li><span style="color: #999;">아직 예측한 사람이 없습니다.</span></li>
             </ul>
@@ -76,13 +78,11 @@
         const away = urlParams.get('away');
 
         if (home && away) {
-            // URL에 팀 이름이 있으면 '참가자 화면' 표시
             matchName = `${home} vs ${away}`;
             document.getElementById('match-title').innerText = `⚽ ${matchName}`;
             document.getElementById('setup-screen').classList.add('hidden');
             document.getElementById('play-screen').classList.remove('hidden');
         } else {
-            // 없으면 '방 만들기 화면' 표시
             document.getElementById('setup-screen').classList.remove('hidden');
             document.getElementById('play-screen').classList.add('hidden');
         }
@@ -98,14 +98,12 @@
             return;
         }
 
-        // 현재 주소 뒤에 팀 이름을 붙여서 공유 링크 생성
         const baseUrl = window.location.origin + window.location.pathname;
         const shareUrl = `${baseUrl}?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`;
         
         document.getElementById('share-section').classList.remove('hidden');
         document.getElementById('share-link').innerText = shareUrl;
 
-        // 링크 자동 복사 기능
         navigator.clipboard.writeText(shareUrl).then(() => {
             alert("링크가 복사되었습니다! 카카오톡에 붙여넣기 하세요.");
         }).catch(err => {
@@ -123,14 +121,17 @@
             return;
         }
 
-        participants.push({ nickname, score });
+        // 공백 제거 정렬 (예: "2 : 1" -> "2:1")
+        const formattedScore = score.replace(/\s+/g, '');
+
+        participants.push({ nickname, score: formattedScore });
         document.getElementById('nickname').value = '';
         document.getElementById('score').value = '';
         updateUI();
-        alert(`[${nickname}]님, [${score}] 예측 완료!`);
+        alert(`[${nickname}]님, [${formattedScore}] 예측 완료!`);
     }
 
-    // 4. 배당률 UI 업데이트
+    // 4. 스코어별 그룹화 및 배당률 UI 업데이트 (요청 반영)
     function updateUI() {
         const totalUsers = participants.length;
         document.getElementById('user-count').innerText = totalUsers;
@@ -139,13 +140,31 @@
 
         if(totalUsers === 0) return;
 
-        const scoreCounts = {};
-        participants.forEach(p => { scoreCounts[p.score] = (scoreCounts[p.score] || 0) + 1; });
+        // 스코어별로 참여자 닉네임을 배열로 묶기
+        const scoreGroups = {};
+        participants.forEach(p => {
+            if (!scoreGroups[p.score]) {
+                scoreGroups[p.score] = [];
+            }
+            scoreGroups[p.score].push(p.nickname);
+        });
 
-        for (const [score, count] of Object.entries(scoreCounts)) {
+        // 화면에 스코어와 참여자 명단 표시
+        for (const [score, names] of Object.entries(scoreGroups)) {
+            const count = names.length;
             const odds = (totalUsers / count).toFixed(1);
+            const nameListStr = names.join(", "); // 참여자1, 참여자2 형식으로 연결
+
             const li = document.createElement('li');
-            li.innerHTML = `<span>스코어 <b>${score}</b></span> <span><b style="color:#007aff">${odds}배</b> (${count}명)</span>`;
+            li.innerHTML = `
+                <div>
+                    <span class="score-badge">${score}</span>
+                    <span class="user-names">${nameListStr}</span>
+                </div>
+                <div>
+                    <b style="color:#007aff">${odds}배</b>
+                </div>
+            `;
             oddsContainer.appendChild(li);
         }
     }
@@ -160,14 +179,17 @@
         const actualScore = prompt("실제 종료된 스코어를 입력하세요 (예: 2:1)", "2:1");
         if(!actualScore) return;
 
-        const scoreCounts = {};
-        participants.forEach(p => { scoreCounts[p.score] = (scoreCounts[p.score] || 0) + 1; });
+        const scoreGroups = {};
+        participants.forEach(p => {
+            if (!scoreGroups[p.score]) scoreGroups[p.score] = [];
+            scoreGroups[p.score].push(p.nickname);
+        });
 
         const winners = participants.filter(p => p.score === actualScore);
         const totalUsers = participants.length;
 
         if(winners.length > 0) {
-            const odds = (totalUsers / scoreCounts[actualScore]).toFixed(1);
+            const odds = (totalUsers / scoreGroups[actualScore].length).toFixed(1);
             let winnerNames = winners.map(w => w.nickname).join(", ");
             let message = `⚽ ${matchName} 스코어 맞추기 결과\n\n`;
             message += `${winnerNames}님, 축하합니다! 예측하신 스코어가 적중하여 이번 게임의 우승자가 되셨습니다.\n\n`;
