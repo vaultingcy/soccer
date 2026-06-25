@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>축구 스코어 맞추기</title>
+    <style>
+        body { font-family: 'Pretendard', sans-serif; background-color: #f4f5f7; margin: 0; padding: 0; display: flex; justify-content: center; }
+        #app { width: 100%; max-width: 480px; background: white; min-height: 100vh; box-shadow: 0 0 10px rgba(0,0,0,0.1); padding: 20px; box-sizing: border-box; }
+        h1 { font-size: 20px; color: #333; text-align: center; }
+        .box { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin-bottom: 20px; }
+        input { width: 100%; padding: 12px; margin-top: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 14px; background-color: #007aff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        button.danger { background-color: #ff3b30; }
+        .odds-list { list-style: none; padding: 0; margin: 0; }
+        .odds-list li { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .odds-list li:last-child { border-bottom: none; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="screen-join">
+        <h1>⚽ 토트넘 vs 아스날</h1>
+        <p style="text-align: center; color: #666; font-size: 14px;">현재 참가자: <span id="user-count">0</span>명</p>
+
+        <div class="box">
+            <label>닉네임</label>
+            <input type="text" id="nickname" placeholder="예: 축구도사">
+            
+            <label>예상 스코어 (홈:원정)</label>
+            <input type="text" id="score" placeholder="예: 2:1">
+            
+            <button onclick="joinGame()">스코어 예측하기</button>
+        </div>
+
+        <div class="box">
+            <h3 style="margin-top: 0; font-size: 16px;">📊 실시간 배당률</h3>
+            <ul id="odds-container" class="odds-list">
+                <li><span style="color: #999;">아직 예측한 사람이 없습니다.</span></li>
+            </ul>
+        </div>
+
+        <button class="danger" onclick="endGame()" style="margin-top: 30px;">[주관자용] 경기 종료 및 결과 발송</button>
+    </div>
+</div>
+
+<script>
+    // 앱 상태 데이터 (DB 역할)
+    let participants = [];
+    const matchName = "토트넘 vs 아스날";
+
+    // 1. 게임 참여 로직
+    function joinGame() {
+        const nickname = document.getElementById('nickname').value;
+        const score = document.getElementById('score').value;
+
+        if(!nickname || !score) {
+            alert("닉네임과 스코어를 모두 입력해주세요!");
+            return;
+        }
+
+        // 참가자 추가
+        participants.push({ nickname, score });
+        
+        // 입력창 초기화
+        document.getElementById('nickname').value = '';
+        document.getElementById('score').value = '';
+
+        // 화면 업데이트
+        updateUI();
+        alert(`[${nickname}]님, [${score}] 예측 완료!`);
+    }
+
+    // 2. 실시간 배당률 계산 및 UI 업데이트 로직
+    function updateUI() {
+        const totalUsers = participants.length;
+        document.getElementById('user-count').innerText = totalUsers;
+
+        const oddsContainer = document.getElementById('odds-container');
+        oddsContainer.innerHTML = '';
+
+        if(totalUsers === 0) return;
+
+        // 스코어별 인원 집계
+        const scoreCounts = {};
+        participants.forEach(p => {
+            scoreCounts[p.score] = (scoreCounts[p.score] || 0) + 1;
+        });
+
+        // 배당률 UI 렌더링
+        for (const [score, count] of Object.entries(scoreCounts)) {
+            const odds = (totalUsers / count).toFixed(1); // 배당률 계산 공식 적용
+            const li = document.createElement('li');
+            li.innerHTML = `<span>스코어 <b>${score}</b></span> <span><b style="color:#007aff">${odds}배</b> (${count}명)</span>`;
+            oddsContainer.appendChild(li);
+        }
+    }
+
+    // 3. 경기 종료 및 2번 템플릿 결과 알림 발송 로직
+    function endGame() {
+        if(participants.length === 0) {
+            alert("참가자가 없습니다.");
+            return;
+        }
+
+        // 임의로 실제 스코어를 2:1로 설정 (실제 앱에서는 주관자가 입력)
+        const actualScore = prompt("실제 종료된 스코어를 입력하세요 (예: 2:1)", "2:1");
+        if(!actualScore) return;
+
+        // 스코어별 인원 집계 (최종 배당률 계산용)
+        const scoreCounts = {};
+        participants.forEach(p => { scoreCounts[p.score] = (scoreCounts[p.score] || 0) + 1; });
+
+        // 정답자 필터링
+        const winners = participants.filter(p => p.score === actualScore);
+        const totalUsers = participants.length;
+
+        if(winners.length > 0) {
+            const odds = (totalUsers / scoreCounts[actualScore]).toFixed(1);
+            
+            // 승자들에게 보낼 2번 템플릿 메시지 생성
+            let winnerNames = winners.map(w => w.nickname).join(", ");
+            let message = `[결과 알림 발송 테스트]\n\n`;
+            message += `⚽ ${matchName} 스코어 맞추기 결과\n\n`;
+            message += `${winnerNames}님, 축하합니다! 예측하신 스코어가 적중하여 이번 게임의 우승자가 되셨습니다.\n\n`;
+            message += `* 최종 스코어: ${actualScore}\n`;
+            message += `* 나의 선택: ${actualScore} (${odds}배)\n\n`;
+            message += `친구들에게 나의 승리를 자랑하고 다음 내기를 시작해보세요!`;
+
+            alert(message);
+        } else {
+            alert(`⚽ ${matchName} 결과\n최종 스코어는 [${actualScore}] 입니다.\n아쉽게도 정답자가 없습니다!`);
+        }
+    }
+</script>
+
+</body>
+</html>
