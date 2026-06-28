@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 월드컵 스코어 게임 (마감 기능 탑재)</title>
+    <title>2026 월드컵 스코어 게임 (완결판)</title>
     <style>
         :root {
             --primary: #1a237e;
@@ -41,10 +41,9 @@
         <p>우리 동료 20인 전용 마감 제어 시스템</p>
     </div>
     
-    <!-- 1. 경기 선택 및 전적 데이터 -->
     <div class="card">
         <div class="card-title">
-            <span>📊 경기 정보 및 전문가 분석</span>
+            <span>📊 경기 선택 및 분석 정보</span>
             <span id="statusBadge" class="badge badge-open">예측 가능</span>
         </div>
         <select id="matchSelector" class="select-box" onchange="updateMatchData()">
@@ -54,11 +53,9 @@
         <div class="info-box" id="infoBox"></div>
     </div>
 
-    <!-- 2. 주관자가 동료들의 예측 데이터를 모아서 입력하는 곳 -->
     <div class="card">
         <div class="card-title">🔮 1. 동료 예측 데이터 등록 (최대 20명)</div>
         
-        <!-- 참여 가능 시간 설정 기능 -->
         <div class="time-setter">
             <span>⏱️ 타이머 설정 (분):</span>
             <input type="number" id="timerMinutes" value="10" style="width: 60px; padding: 6px; text-align: center; border-radius: 6px; border: 1px solid #ccd6dd;">
@@ -66,7 +63,7 @@
         </div>
         <div id="timerDisplay" style="font-size: 14px; font-weight: bold; color: var(--fail); margin-bottom: 12px; text-align: center;"></div>
 
-        <input type="text" id="userName" class="input-name" placeholder="참여자 이름 (예: 이창엽)">
+        <input type="text" id="userName" class="input-name" placeholder="참여자 이름 (예: 축구도사)">
         <div class="vs-container">
             <span class="team-label" id="homeTeam">대한민국</span>
             <input type="number" id="homeScore" class="score-input" min="0" value="0">
@@ -76,8 +73,6 @@
         </div>
         
         <button class="btn" style="background:#e0e0e0; margin-bottom: 12px;" onclick="addParticipant()">➕ 참여자 예측 명단에 추가</button>
-        
-        <!-- 주관자 즉시 마감 키 -->
         <button class="btn btn-close" onclick="forceCloseRegistration()">🔒 주관자 권한 즉시 참여 마감</button>
         
         <div class="user-list" id="participantList">
@@ -85,7 +80,6 @@
         </div>
     </div>
 
-    <!-- 3. 경기 종료 후 주관자가 실제 결과를 입력하고 자동 통보하는 곳 -->
     <div class="card" style="border-top: 4px solid var(--accent);">
         <div class="card-title" style="color: var(--accent);">📢 2. 경기 결과 입력 및 자동 맞춤 통보</div>
         <div class="vs-container" style="background: #f4faf4;">
@@ -100,13 +94,24 @@
 </div>
 
 <script>
+    // 💡 [수정 가이드] 실제 경기 대진 정보와 전적 데이터를 바꾸려면 이 박스 안의 텍스트를 수정하세요!
     const matchMaster = {
-        match1: { home: "대한민국", away: "포르투갈", history: "최근 전적: 1승 0패 (2022 월드컵 2:1 승)", expert: "전문가 픽: 포르투갈 우세 (58%), 예상 1:2" },
-        match2: { home: "브라질", away: "아르헨티나", history: "최근 전적: 2승 1무 2패 (치열한 백중세)", expert: "전문가 픽: 무승부 확률 높음, 예상 1:1" }
+        match1: { 
+            home: "대한민국", 
+            away: "포르투갈", 
+            history: "최근 전적: 1승 0패 (2022 월드컵 2:1 승)", 
+            expert: "전문가 픽: 포르투갈 우세 (58%), 예상 1:2" 
+        },
+        match2: { 
+            home: "브라질", 
+            away: "아르헨티나", 
+            history: "최근 전적: 2승 1무 2패 (치열한 백중세)", 
+            expert: "전문가 픽: 무승부 확률 높음, 예상 1:1" 
+        }
     };
 
     let participants = [];
-    let isRegistrationOpen = true; // 참여 가능 상태 플래그
+    let isRegistrationOpen = true; 
     let countdownInterval;
 
     function updateMatchData() {
@@ -119,22 +124,18 @@
         document.getElementById("infoBox").innerHTML = `⚽ <b>과거 전적:</b> ${data.history}<br>🔮 <b>전문가 예측:</b> ${data.expert}`;
     }
 
-    // 주관자 타이머 시작 함수
     function startTimer() {
         if (!isRegistrationOpen) return alert("이미 마감된 게임입니다.");
         clearInterval(countdownInterval);
         
         const minutes = parseInt(document.getElementById("timerMinutes").value) || 10;
         let totalSeconds = minutes * 60;
-
         const display = document.getElementById("timerDisplay");
         
         countdownInterval = setInterval(() => {
             const min = Math.floor(totalSeconds / 60);
             const sec = totalSeconds % 60;
-
             display.innerText = `⏱️ 자동 마감까지 남은 시간: ${min}분 ${sec}초`;
-
             if (totalSeconds <= 0) {
                 clearInterval(countdownInterval);
                 closeRegistration("시간 초과로 인해 예측이 자동 마감되었습니다.");
@@ -145,16 +146,14 @@
         alert(`${minutes}분 타이머가 시작되었습니다.`);
     }
 
-    // 주관자 즉시 마감 키 함수
     function forceCloseRegistration() {
         if (!isRegistrationOpen) return alert("이미 마감된 상태입니다.");
-        if (confirm("정말로 지금 참여를 마감하시겠습니까? 더 이상 추가 등록이 불가능합니다.")) {
+        if (confirm("정말로 지금 참여를 마감하시겠습니까?")) {
             clearInterval(countdownInterval);
             closeRegistration("주관자에 의해 참여가 마감되었습니다.");
         }
     }
 
-    // 마감 상태 처리 공통 함수
     function closeRegistration(reason) {
         isRegistrationOpen = false;
         document.getElementById("timerDisplay").innerText = `🔒 참여 마감됨 (${reason})`;
@@ -164,19 +163,14 @@
         alert(reason);
     }
 
-    // 명단 추가 함수
     function addParticipant() {
-        if (!isRegistrationOpen) {
-            return alert("죄송합니다. 참여가 이미 마감되어 새 참여자를 추가할 수 없습니다.");
-        }
-
+        if (!isRegistrationOpen) return alert("참여가 이미 마감되었습니다.");
         const name = document.getElementById("userName").value.trim();
         if (!name) return alert("참여자 이름을 입력해주세요.");
         if (participants.length >= 20) {
             closeRegistration("참여 인원 제한(20명)이 초과되어 자동 마감합니다.");
             return;
         }
-
         const homeS = parseInt(document.getElementById("homeScore").value) || 0;
         const awayS = parseInt(document.getElementById("awayScore").value) || 0;
 
@@ -205,7 +199,6 @@
         renderParticipants();
     }
 
-    // 결과 정산 및 공유
     function settleAndShareAll() {
         if (participants.length === 0) return alert("정산할 참여자 명단이 없습니다.");
         if (isRegistrationOpen) {
@@ -230,12 +223,9 @@
         });
 
         let message = `📢 [월드컵 경기 최종 결과 공지]\n\n⚔️ 경기: ${data.home} vs ${data.away}\n⚽ 최종 스코어 👉 [ ${actualHome} : ${actualAway} ]\n\n--------------------\n`;
-
         if (winners.length > 0) {
             message += `🎉 스코어 적중자 (축하합니다!):\n🥇 ${winners.join(', ')}\n👉 "돋보이는 통찰력! 완벽하게 맞추셨습니다! 축하드려요! 🥳"\n\n`;
-        } else {
-            message += `🎉 스코어 적중자: 없음 😭\n\n`;
-        }
+        } else { message += `🎉 스코어 적중자: 없음 😭\n\n`; }
 
         if (losers.length > 0) {
             message += `😢 아쉬운 낙첨자:\n🏃‍♂️ ${losers.join(', ')}\n👉 "아쉽네요! 다음 기회에 꼭 맞춰보세요! 화이팅! 🔥"`;
@@ -245,12 +235,12 @@
             navigator.share({ title: "월드컵 최종 정산 결과", text: message }).catch(console.error);
         } else {
             navigator.clipboard.writeText(message);
-            alert("정산 결과 메시지가 클립보드에 복사되었습니다!\n단톡방이나 문자에 바로 '붙여넣기(Ctrl+V)' 하세요.");
+            alert("정산 결과 메시지가 클립보드에 복사되었습니다!\n단톡방에 '붙여넣기' 하세요.");
         }
     }
 
     updateMatchData();
 </script>
-
 </body>
 </html>
+1
