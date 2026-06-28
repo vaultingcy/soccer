@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 월드컵 프렌즈 리그 (실시간 현황판 탑재)</title>
+    <title>2026 월드컵 프렌즈 리그 (데이터 누적 버전)</title>
     <style>
         :root {
             --primary: #1a237e;
@@ -25,8 +25,8 @@
         .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 8px; }
         .btn-close { background: var(--fail); color: white; }
         .btn-result { background: var(--accent); color: white; margin-top: 10px; }
+        .btn-primary { background: var(--primary); color: white; }
         
-        /* 📊 실시간 현황판 및 통계 레이아웃 스타일 */
         .status-panel { background: #fff; border: 1px solid #ccd6dd; padding: 12px; border-radius: 8px; margin-top: 12px; }
         .status-title { font-size: 13px; font-weight: bold; color: #555; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px; }
         .stat-bar-container { display: flex; background: #e0e0e0; height: 20px; border-radius: 10px; overflow: hidden; margin: 8px 0; font-size: 11px; font-weight: bold; color: white; text-align: center; line-height: 20px; }
@@ -39,12 +39,11 @@
         .badge { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; color: white; }
         .badge-open { background: var(--accent); }
         .badge-closed { background: var(--fail); }
-        .time-setter { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; font-size: 13px; font-weight: bold; }
         
-        .prediction-tag { font-weight: bold; display: inline-block; width: 85px; font-size: 12px; margin-right: 4px; }
-        .tag-gpt { color: #10a37f; }
-        .tag-gemini { color: #1a73e8; }
-        .tag-gambler { color: #d32f2f; }
+        /* 주관자/참여자 모드 스위치 버튼 */
+        .mode-switcher { display: flex; gap: 8px; margin-bottom: 16px; }
+        .mode-btn { flex: 1; padding: 10px; border: 1px solid #ccd6dd; background: #eee; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; text-align: center; }
+        .mode-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
     </style>
 </head>
 <body>
@@ -52,13 +51,19 @@
 <div class="app-container">
     <div class="header">
         <h1>🏆 2026 월드컵 프렌즈 리그</h1>
-        <p>우리 동료 20인 전용 마감 제어 시스템</p>
+        <p>우리 동료 20인 전용 실시간 데이터 누적 시스템</p>
+    </div>
+
+    <!-- 0. 역할 선택 스위치 (주관자 모드 vs 참여자 모드) -->
+    <div class="mode-switcher">
+        <div id="btnModeUser" class="mode-btn active" onclick="switchMode('user')">🙋‍♂️ 참여자 화면</div>
+        <div id="btnModeAdmin" class="mode-btn" onclick="switchMode('admin')">👑 주관자(방장) 화면</div>
     </div>
     
     <!-- 1. 경기 선택 및 다중 AI 분석 데이터 -->
     <div class="card">
         <div class="card-title">
-            <span>📊 빅매치 선택 및 종합 예측 비교</span>
+            <span>Automated 📊 빅매치 분석 정보</span>
             <span id="statusBadge" class="badge badge-open">예측 가능</span>
         </div>
         <select id="matchSelector" class="select-box" onchange="updateMatchData()">
@@ -72,18 +77,10 @@
         <div class="info-box" id="infoBox"></div>
     </div>
 
-    <!-- 2. 참여자 예측 등록 -->
-    <div class="card">
-        <div class="card-title">🔮 1. 동료 예측 데이터 등록 (최대 20명)</div>
-        
-        <div class="time-setter">
-            <span>⏱️ 타이머 설정 (분):</span>
-            <input type="number" id="timerMinutes" value="10" style="width: 60px; padding: 6px; text-align: center; border-radius: 6px; border: 1px solid #ccd6dd;">
-            <button onclick="startTimer()" style="padding: 6px 12px; background: var(--primary); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer;">타이머 시작</button>
-        </div>
-        <div id="timerDisplay" style="font-size: 14px; font-weight: bold; color: var(--fail); margin-bottom: 12px; text-align: center;"></div>
-
-        <input type="text" id="userName" class="input-name" placeholder="참여자 이름 (예: 축구도사)">
+    <!-- 2. [참여자 모드] 예측 입력 및 주관자에게 전송 기능 -->
+    <div class="card" id="userSection">
+        <div class="card-title">🔮 내 예측 점수 입력하기</div>
+        <input type="text" id="userName" class="input-name" placeholder="참여자 이름 입력 (예: 축구도사)">
         <div class="vs-container">
             <span class="team-label" id="homeTeam">대한민국</span>
             <input type="number" id="homeScore" class="score-input" min="0" value="0">
@@ -91,37 +88,49 @@
             <input type="number" id="awayScore" class="score-input" min="0" value="0">
             <span class="team-label" id="awayTeam">포르투갈</span>
         </div>
+        <button class="btn btn-share" onclick="submitToAdmin()">💬 주관자(방장)에게 내 예측 전송하기</button>
+    </div>
+
+    <!-- 3. [주관자 모드] 참여자 데이터 복사-붙여넣기 및 실시간 현황판 누적 기능 -->
+    <div class="card" id="adminSection" style="display: none; border: 2px solid var(--primary);">
+        <div class="card-title" style="color: var(--primary);">👑 주관자 전용 데이터 누적 센터</div>
         
-        <button class="btn" style="background:#e0e0e0; margin-bottom: 12px;" onclick="addParticipant()">➕ 참여자 예측 명단에 추가</button>
-        <button class="btn btn-close" onclick="forceCloseRegistration()">🔒 주관자 권한 즉시 참여 마감</button>
+        <!-- 데이터 원터치 등록창 -->
+        <div style="margin-bottom: 12px;">
+            <label style="font-size: 12px; font-weight: bold; color: #555;">📥 동료에게 받은 코드 붙여넣기:</label>
+            <input type="text" id="adminDataInput" class="input-name" placeholder="카톡으로 받은 코드를 여기에 붙여넣으세요" style="margin-top: 4px; margin-bottom: 6px;">
+            <button class="btn btn-primary" onclick="importParticipantData()" style="padding: 10px; font-size: 13px;">➕ 동료 데이터 현황판에 누적 등록</button>
+        </div>
+
+        <button class="btn btn-close" onclick="forceCloseRegistration()" style="margin-bottom: 16px;">🔒 참여 공식 마감하기</button>
         
-        <!-- 📊 [신규] 우리 동료들 실시간 참여 현황판 리포트 대시보드 -->
+        <!-- 📊 동료들 실시간 누적 현황판 대시보드 -->
         <div class="status-panel">
-            <div class="status-title">📈 동료들의 승무패 실시간 예측 현황</div>
+            <div class="status-title">📈 동료들의 승무패 누적 현황판</div>
             <div class="stat-bar-container" id="statBar">
                 <div class="stat-home" id="statHomeBar" style="width: 33.3%">홈 승</div>
                 <div class="stat-draw" id="statDrawBar" style="width: 33.3%">무승부</div>
                 <div class="stat-away" id="statAwayBar" style="width: 33.4%">원정 승</div>
             </div>
-            <div id="topScoreDisplay" style="font-size: 12px; font-weight: bold; color: var(--primary); margin-top: 8px;">📊 최다 투표 스코어: 아직 데이터가 없습니다.</div>
+            <div id="topScoreDisplay" style="font-size: 12px; font-weight: bold; color: var(--primary); margin-top: 8px;">📊 우리 동료 대세 스코어: 아직 데이터가 없습니다.</div>
         </div>
 
+        <!-- 실시간 누적된 명단 출력 -->
         <div class="user-list" id="participantList">
-            <div style="color:#aaa; text-align:center; padding:20px 0;">등록된 참여자가 없습니다.</div>
+            <div style="color:#aaa; text-align:center; padding:20px 0;">누적된 참여자가 없습니다. 동료의 코드를 등록해 주세요.</div>
         </div>
-    </div>
 
-    <!-- 3. 경기 결과 입력 및 통보 -->
-    <div class="card" style="border-top: 4px solid var(--accent);">
-        <div class="card-title" style="color: var(--accent);">📢 2. 경기 결과 입력 및 자동 맞춤 통보</div>
+        <!-- 경기 결과 입력 및 마감 통보 -->
+        <hr style="border:0; border-top: 1px solid #ccd6dd; margin: 20px 0;">
+        <div class="card-title" style="color: var(--accent);">📢 2. 최종 경기 스코어 입력 및 정산 결과 통보</div>
         <div class="vs-container" style="background: #f4faf4;">
             <span class="team-label" id="resHomeTeam">대한민국</span>
             <input type="number" id="actualHomeScore" class="score-input" min="0" value="0">
-            <span style="font-weight:bold; color:var(--accent); font-size:13px;">실제 스코어</span>
+            <span style="font-weight:bold; color:var(--accent); font-size:13px;">실제 결과</span>
             <input type="number" id="actualAwayScore" class="score-input" min="0" value="0">
             <span class="team-label" id="resAwayTeam">포르투갈</span>
         </div>
-        <button class="btn btn-result" onclick="settleAndShareAll()">📢 맞춤형 결과 메시지 단톡방 전송</button>
+        <button class="btn btn-result" onclick="settleAndShareAll()">📢 맞춤형 정산 결과 단톡방 전송</button>
     </div>
 </div>
 
@@ -135,9 +144,25 @@
         match6: { home: "우루과이", away: "이탈리아", history: "역대 전적 완벽 동률", players: "발베르데(레알) / 바렐라(인터밀란)", gpt: "우루과이 1:0 승", gemini: "이탈리아 1:0 승", gambler: "저득점 매치 예측" }
     };
 
-    let participants = [];
+    let participants = []; // 오직 주관자 모드에서만 메모리에 누적 저장됨
     let isRegistrationOpen = true; 
-    let countdownInterval;
+
+    // 화면 모드 스위칭 함수 (참여자 <-> 주관자)
+    function switchMode(mode) {
+        if(mode === 'user') {
+            document.getElementById('btnModeUser').className = 'mode-btn active';
+            document.getElementById('btnModeAdmin').className = 'mode-btn';
+            document.getElementById('userSection').style.display = 'block';
+            document.getElementById('adminSection').style.display = 'none';
+        } else {
+            document.getElementById('btnModeUser').className = 'mode-btn';
+            document.getElementById('btnModeAdmin').className = 'mode-btn active';
+            document.getElementById('userSection').style.display = 'none';
+            document.getElementById('adminSection').style.display = 'block';
+            renderParticipants();
+            calculateStatistics();
+        }
+    }
 
     function updateMatchData() {
         const selected = document.getElementById("matchSelector").value;
@@ -156,23 +181,83 @@
             🎲 <span class="prediction-tag tag-gambler">도박사 지표:</span> ${data.gambler}
         `;
         
-        // 경기를 변경하면 참여자 풀을 초기화하고 통계도 리셋합니다.
+        // 경기를 변경하면 기존 주관자 화면의 누적 데이터도 초기화합니다.
         participants = [];
         renderParticipants();
         calculateStatistics();
     }
 
-    // 📊 [핵심 신규 엔진] 동료들의 실시간 예측 데이터를 기반으로 비율 및 다수결 스코어 연산
+    // 🙋‍♂️ [참여자 전용] 내 예측 데이터를 가공해 주관자에게 카톡/문자 코드로 보내기
+    function submitToAdmin() {
+        const selected = document.getElementById("matchSelector").value;
+        const data = matchMaster[selected];
+        const name = document.getElementById("userName").value.trim();
+        
+        if (!name) return alert("이름을 입력해 주세요! 예시: 축구도사");
+
+        const homeS = parseInt(document.getElementById("homeScore").value) || 0;
+        const awayS = parseInt(document.getElementById("awayScore").value) || 0;
+
+        // 주관자가 붙여넣어 누적할 수 있는 고유 데이터 스트링 포맷 생성
+        const dataCode = `[DATA]${name}_${homeS}:${awayS}`;
+        const message = `⚽ [월드컵 예측 데이터 제출]\n\n👤 참여자: ${name}\n⚔️ 경기: ${data.home} vs ${data.away}\n🔮 내 예측 스코어: [ ${homeS} : ${awayS} ]\n\n⚠️ 아래 암호 코드를 그대로 복사해서 주관자(방장)에게 보내주세요!\n👇👇👇\n${dataCode}`;
+
+        if (navigator.share) {
+            navigator.share({ title: "월드컵 예측 제출", text: message }).catch(console.error);
+        } else {
+            navigator.clipboard.writeText(message);
+            alert("예측 암호 코드가 복사되었습니다! 주관자(방장)의 카톡이나 문자로 붙여넣기(Ctrl+V)해서 보내주세요.");
+        }
+    }
+
+    // 👑 [주관자 전용] 전달받은 동료의 암호 코드를 읽어서 실시간 현황판에 누적 등록하기
+    function importParticipantData() {
+        if (!isRegistrationOpen) return alert("이미 참여가 마감된 게임입니다.");
+        
+        const rawInput = document.getElementById("adminDataInput").value.trim();
+        if (!rawInput || !rawInput.includes("[DATA]")) {
+            return alert("올바른 동료의 암호 코드가 아닙니다. [DATA]로 시작하는 문장 전체를 붙여넣어 주세요.");
+        }
+
+        try {
+            // 암호 코드 파싱 로직 ([DATA]축구도사_2:1)
+            const dataPart = rawInput.split("[DATA]")[1].trim(); // '축구도사_2:1' 추출
+            const namePart = dataPart.split("_")[0]; // '축구도사' 추출
+            const scorePart = dataPart.split("_")[1]; // '2:1' 추출
+            const homeS = parseInt(scorePart.split(":")[0]);
+            const awayS = parseInt(scorePart.split(":")[1]);
+
+            // 이미 동일한 이름의 동료가 등록되어 있는지 중복 검사
+            const isDuplicate = participants.some(p => p.name === namePart);
+            if (isDuplicate) {
+                if (!confirm(`이미 명단에 [${namePart}] 동료가 있습니다. 새로운 예측 점수로 갱신할까요?`)) return;
+                participants = participants.filter(p => p.name !== namePart); // 기존 데이터 제거 후 재생성
+            }
+
+            if (participants.length >= 20) return alert("최대 참여 인원(20명)을 초과했습니다.");
+
+            // 주관자 데이터 풀에 실시간 차곡차곡 누적 데이터 저장
+            participants.push({ name: namePart, home: homeS, away: awayS });
+            
+            // 입력창 비우고 현황판 리렌더링 및 통계 자동 재계산
+            document.getElementById("adminDataInput").value = "";
+            renderParticipants();
+            calculateStatistics();
+            alert(`[${namePart}] 동료의 예측 데이터가 성공적으로 누적 현황판에 반영되었습니다!`);
+
+        } catch (e) {
+            alert("데이터 해석 중 오류가 발생했습니다. 코드가 손상되지 않았는지 확인해 주세요.");
+        }
+    }
+
+    // 주관자 시점 실시간 통계 계산 및 누적 그래프 출력 엔진
     function calculateStatistics() {
         const total = participants.length;
         if (total === 0) {
-            document.getElementById("statHomeBar").style.width = "33.3%";
-            document.getElementById("statHomeBar").innerText = "홈 승";
-            document.getElementById("statDrawBar").style.width = "33.3%";
-            document.getElementById("statDrawBar").innerText = "무승부";
-            document.getElementById("statAwayBar").style.width = "33.4%";
-            document.getElementById("statAwayBar").innerText = "원정 승";
-            document.getElementById("topScoreDisplay").innerText = "📊 최다 투표 스코어: 아직 데이터가 없습니다.";
+            document.getElementById("statHomeBar").style.width = "33.3%"; document.getElementById("statHomeBar").innerText = "홈 승";
+            document.getElementById("statDrawBar").style.width = "33.3%"; document.getElementById("statDrawBar").innerText = "무승부";
+            document.getElementById("statAwayBar").style.width = "33.4%"; document.getElementById("statAwayBar").innerText = "원정 승";
+            document.getElementById("topScoreDisplay").innerText = "📊 우리 동료 대세 스코어: 아직 누적된 데이터가 없습니다.";
             return;
         }
 
@@ -180,20 +265,13 @@
         let scoreCounts = {};
 
         participants.forEach(p => {
-            // 1. 승무패 비율 집계
             if (p.home > p.away) homeWins++;
             else if (p.home === p.away) draws++;
             else awayWins++;
 
-            // 2. 최다 스코어 집계
             let scoreKey = `${p.home}:${p.away}`;
             scoreCounts[scoreKey] = (scoreCounts[scoreKey] || 0) + 1;
         });
-
-        // 그래프 가로폭 비율 계산
-        const homePct = ((homeWins / total) * 180).toFixed(0); 
-        const drawPct = ((draws / total) * 180).toFixed(0);
-        const awayPct = ((awayWins / total) * 180).toFixed(0);
 
         document.getElementById("statHomeBar").style.width = `${(homeWins/total)*100}%`;
         document.getElementById("statHomeBar").innerText = homeWins > 0 ? `홈 승 (${((homeWins/total)*100).toFixed(0)}%)` : '';
@@ -202,86 +280,34 @@
         document.getElementById("statAwayBar").style.width = `${(awayWins/total)*100}%`;
         document.getElementById("statAwayBar").innerText = awayWins > 0 ? `원정 승 (${((awayWins/total)*100).toFixed(0)}%)` : '';
 
-        // 최고 빈도 스코어 찾기
-        let maxCount = 0;
-        let topScores = [];
+        let maxCount = 0; let topScores = [];
         for (let score in scoreCounts) {
-            if (scoreCounts[score] > maxCount) {
-                maxCount = scoreCounts[score];
-                topScores = [score];
-            } else if (scoreCounts[score] === maxCount) {
-                topScores.push(score);
-            }
+            if (scoreCounts[score] > maxCount) { maxCount = scoreCounts[score]; topScores = [score]; }
+            else if (scoreCounts[score] === maxCount) { topScores.push(score); }
         }
-
-        document.getElementById("topScoreDisplay").innerText = `📊 우리 동료 대세 스코어: [ ${topScores.join(', ')} ] (${maxCount}명 투표)`;
-    }
-
-    function startTimer() {
-        if (!isRegistrationOpen) return alert("이미 마감된 게임입니다.");
-        clearInterval(countdownInterval);
-        const minutes = parseInt(document.getElementById("timerMinutes").value) || 10;
-        let totalSeconds = minutes * 60;
-        const display = document.getElementById("timerDisplay");
-        
-        countdownInterval = setInterval(() => {
-            const min = Math.floor(totalSeconds / 60);
-            const sec = totalSeconds % 60;
-            display.innerText = `⏱️ 자동 마감까지 남은 시간: ${min}분 ${sec}초`;
-            if (totalSeconds <= 0) {
-                clearInterval(countdownInterval);
-                closeRegistration("시간 초과로 인해 예측이 자동 마감되었습니다.");
-            }
-            totalSeconds--;
-        }, 1000);
-        alert(`${minutes}분 타이머가 시작되었습니다.`);
+        document.getElementById("topScoreDisplay").innerText = `📊 우리 동료 대세 스코어: [ ${topScores.join(', ')} ] (${maxCount}명 누적 투표)`;
     }
 
     function forceCloseRegistration() {
         if (!isRegistrationOpen) return alert("이미 마감된 상태입니다.");
-        if (confirm("정말로 지금 참여를 마감하시겠습니까?")) {
-            clearInterval(countdownInterval);
-            closeRegistration("주관자에 의해 참여가 마감되었습니다.");
+        if (confirm("정말로 지금 참여를 공식 마감하시겠습니까? 더 이상 동료들의 추가 데이터 입력이 제한됩니다.")) {
+            isRegistrationOpen = false;
+            const badge = document.getElementById("statusBadge");
+            badge.innerText = "참여 마감"; badge.className = "badge badge-closed";
+            renderParticipants();
         }
-    }
-
-    function closeRegistration(reason) {
-        isRegistrationOpen = false;
-        document.getElementById("timerDisplay").innerText = `🔒 참여 마감됨 (${reason})`;
-        const badge = document.getElementById("statusBadge");
-        badge.innerText = "참여 마감";
-        badge.className = "badge badge-closed";
-        alert(reason);
-        renderParticipants(); // 삭제 x 버튼 리렌더링 차단 위함
-    }
-
-    function addParticipant() {
-        if (!isRegistrationOpen) return alert("참여가 이미 마감되었습니다.");
-        const name = document.getElementById("userName").value.trim();
-        if (!name) return alert("참여자 이름을 입력해주세요.");
-        if (participants.length >= 20) {
-            closeRegistration("참여 인원 제한(20명)이 초과되어 자동 마감합니다.");
-            return;
-        }
-        const homeS = parseInt(document.getElementById("homeScore").value) || 0;
-        const awayS = parseInt(document.getElementById("awayScore").value) || 0;
-
-        participants.push({ name: name, home: homeS, away: awayS });
-        document.getElementById("userName").value = ""; 
-        renderParticipants();
-        calculateStatistics(); // 등록 시 실시간 통계 갱신
     }
 
     function renderParticipants() {
         const listDiv = document.getElementById("participantList");
         if (participants.length === 0) {
-            listDiv.innerHTML = '<div style="color:#aaa; text-align:center; padding:20px 0;">등록된 참여자가 없습니다.</div>';
+            listDiv.innerHTML = '<div style="color:#aaa; text-align:center; padding:20px 0;">누적된 참여자가 없습니다. 동료의 코드를 등록해 주세요.</div>';
             return;
         }
         listDiv.innerHTML = participants.map((p, idx) => `
             <div class="user-item">
-                <span><b>${p.name}</b></span>
-                <span>[예측] ${p.home} : ${p.away} ${isRegistrationOpen ? `<span style="color:red; cursor:pointer;" onclick="removeParticipant(${idx})">❌</span>` : ''}</span>
+                <span><b>🙋‍♂️ ${p.name}</b></span>
+                <span>[예측 스코어] <mark style="background:#fff59d; font-weight:bold;"> ${p.home} : ${p.away} </mark> ${isRegistrationOpen ? `<span style="color:red; cursor:pointer; margin-left:6px;" onclick="removeParticipant(${idx})">❌</span>` : ''}</span>
             </div>
         `).join('');
     }
@@ -290,16 +316,12 @@
         if (!isRegistrationOpen) return alert("마감된 이후에는 명단을 수정할 수 없습니다.");
         participants.splice(idx, 1);
         renderParticipants();
-        calculateStatistics(); // 삭제 시 실시간 통계 재연산
+        calculateStatistics();
     }
 
     function settleAndShareAll() {
         if (participants.length === 0) return alert("정산할 참여자 명단이 없습니다.");
-        if (isRegistrationOpen) {
-            if(!confirm("아직 참여 마감을 하지 않았습니다. 정산을 진행하고 마감할까요?")) return;
-            closeRegistration("결과 정산 시작으로 인한 강제 마감");
-        }
-
+        
         const selected = document.getElementById("matchSelector").value;
         const data = matchMaster[selected];
         const actualHome = parseInt(document.getElementById("actualHomeScore").value) || 0;
@@ -309,14 +331,11 @@
         let losers = [];
 
         participants.forEach(p => {
-            if (p.home === actualHome && p.away === actualAway) {
-                winners.push(p.name);
-            } else {
-                losers.push(p.name);
-            }
+            if (p.home === actualHome && p.away === actualAway) { winners.push(p.name); } 
+            else { losers.push(p.name); }
         });
 
-        let message = `📢 [월드컵 경기 최종 결과 공지]\n\n⚔️ 경기: ${data.home} vs ${data.away}\n⚽ 최종 스코어 👉 [ ${actualHome} : ${actualAway} ]\n\n--------------------\n`;
+        let message = `📢 [월드컵 경기 최종 결과 공지]\n\n⚔️ 경기: ${data.home} vs ${data.away}\n⚽ 최종 정답 스코어 👉 [ ${actualHome} : ${actualAway} ]\n\n--------------------\n`;
         if (winners.length > 0) {
             message += `🎉 스코어 적중자 (축하합니다!):\n🥇 ${winners.join(', ')}\n👉 "돋보이는 통찰력! 완벽하게 맞추셨습니다! 축하드려요! 🥳"\n\n`;
         } else { message += `🎉 스코어 적중자: 없음 😭\n\n`; }
@@ -329,7 +348,7 @@
             navigator.share({ title: "월드컵 최종 정산 결과", text: message }).catch(console.error);
         } else {
             navigator.clipboard.writeText(message);
-            alert("정산 결과 메시지가 클립보드에 복사되었습니다!\n단톡방에 '붙여넣기' 하세요.");
+            alert("정산 결과 리포트가 복사되었습니다! 단톡방에 붙여넣기 하세요.");
         }
     }
 
