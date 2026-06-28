@@ -1,208 +1,37 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>축구 스코어 맞추기</title>
-    <style>
-        body { font-family: 'Pretendard', sans-serif; background-color: #f4f5f7; margin: 0; padding: 0; display: flex; justify-content: center; }
-        #app { width: 100%; max-width: 480px; background: white; min-height: 100vh; box-shadow: 0 0 10px rgba(0,0,0,0.1); padding: 20px; box-sizing: border-box; }
-        h1 { font-size: 22px; color: #333; text-align: center; margin-bottom: 20px; }
-        .box { border: 1px solid #ddd; border-radius: 12px; padding: 16px; margin-bottom: 20px; background-color: #fff; }
-        label { font-size: 14px; font-weight: bold; color: #555; }
-        input { width: 100%; padding: 12px; margin-top: 8px; margin-bottom: 16px; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        button { width: 100%; padding: 14px; background-color: #007aff; color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-        button.success { background-color: #34c759; }
-        button.danger { background-color: #ff3b30; }
-        .odds-list { list-style: none; padding: 0; margin: 0; }
-        .odds-list li { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; font-size: 15px; }
-        .odds-list li:last-child { border-bottom: none; }
-        .score-badge { background-color: #333; color: white; padding: 4px 8px; border-radius: 6px; font-weight: bold; margin-right: 8px; }
-        .user-names { color: #555; font-weight: 500; }
-        #share-section { margin-top: 15px; padding: 15px; background-color: #e8f0fe; border-radius: 8px; text-align: center; word-break: break-all; }
-        .hidden { display: none !important; }
-    </style>
-</head>
-<body>
+// 1. 경기 결과가 업데이트되었을 때 실행되는 정산 및 알림 함수
+async function settleMatchAndNotify(matchId, finalHomeScore, finalAwayScore) {
+  // DB에서 해당 경기를 예측한 유저들과 그들의 예측 스코어 가져오기
+  const predictions = await db.query("SELECT * FROM predictions WHERE match_id = ?", [matchId]);
+  
+  for (let pred of predictions) {
+    let scoreEarned = 0;
+    let resultMessage = "";
 
-<div id="app">
-    <div id="setup-screen" class="box">
-        <h1>🛠️ 내기 방 만들기 (주관자용)</h1>
-        <label>홈팀 이름</label>
-        <input type="text" id="home-team" placeholder="예: 토트넘">
-        
-        <label>원정팀 이름</label>
-        <input type="text" id="away-team" placeholder="예: 아스날">
-        
-        <button class="success" onclick="createRoom()">전용 링크 만들고 복사하기</button>
-
-        <div id="share-section" class="hidden">
-            <p style="font-size: 13px; color: #555; margin-bottom: 10px;">👇 아래 링크를 친구들에게 카톡으로 보내세요!</p>
-            <p id="share-link" style="font-size: 14px; font-weight: bold; color: #007aff;"></p>
-        </div>
-    </div>
-
-    <div id="play-screen" class="hidden">
-        <h1 id="match-title">⚽ 경기 준비 중</h1>
-        <p style="text-align: center; color: #666; font-size: 14px;">현재 참가자: <span id="user-count">0</span>명</p>
-
-        <div class="box">
-            <label>내 닉네임</label>
-            <input type="text" id="nickname" placeholder="예: 축구도사">
-            
-            <label>예상 스코어 (홈:원정)</label>
-            <input type="text" id="score" placeholder="예: 2:1">
-            
-            <button onclick="joinGame()">스코어 예측하기</button>
-        </div>
-
-        <div class="box">
-            <h3 style="margin-top: 0; font-size: 16px;">📊 실시간 스코어별 참여 현황</h3>
-            <ul id="odds-container" class="odds-list">
-                <li><span style="color: #999;">아직 예측한 사람이 없습니다.</span></li>
-            </ul>
-        </div>
-
-        <button class="danger" onclick="endGame()" style="margin-top: 30px;">[주관자용] 경기 종료 및 결과 발송</button>
-    </div>
-</div>
-
-<script>
-    let participants = [];
-    let matchName = "";
-
-    // 1. 앱 시작 시 주소(URL) 확인 로직
-    window.onload = function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const home = urlParams.get('home');
-        const away = urlParams.get('away');
-
-        if (home && away) {
-            matchName = `${home} vs ${away}`;
-            document.getElementById('match-title').innerText = `⚽ ${matchName}`;
-            document.getElementById('setup-screen').classList.add('hidden');
-            document.getElementById('play-screen').classList.remove('hidden');
-        } else {
-            document.getElementById('setup-screen').classList.remove('hidden');
-            document.getElementById('play-screen').classList.add('hidden');
-        }
-    };
-
-    // 2. 주관자 방 만들기 및 링크 복사
-    function createRoom() {
-        const home = document.getElementById('home-team').value;
-        const away = document.getElementById('away-team').value;
-
-        if(!home || !away) {
-            alert("홈팀과 원정팀 이름을 모두 입력해주세요!");
-            return;
-        }
-
-        const baseUrl = window.location.origin + window.location.pathname;
-        const shareUrl = `${baseUrl}?home=${encodeURIComponent(home)}&away=${encodeURIComponent(away)}`;
-        
-        document.getElementById('share-section').classList.remove('hidden');
-        document.getElementById('share-link').innerText = shareUrl;
-
-        navigator.clipboard.writeText(shareUrl).then(() => {
-            alert("링크가 복사되었습니다! 카카오톡에 붙여넣기 하세요.");
-        }).catch(err => {
-            alert("복사 실패. 위 링크를 직접 복사해주세요.");
-        });
+    // 2. 점수 계산 로직
+    if (pred.home_score === finalHomeScore && pred.away_score === finalAwayScore) {
+      scoreEarned = 3; // 스코어 정확히 맞춤 (대박)
+      resultMessage = `[적중] 스코어(${finalHomeScore}:${finalAwayScore})를 정확히 맞추어 3점을 획득했습니다!`;
+    } else if (Math.sign(pred.home_score - pred.away_score) === Math.sign(finalHomeScore - finalAwayScore)) {
+      scoreEarned = 1; // 승무패만 맞춤
+      resultMessage = `[절반의 성공] 승패를 맞추어 1점을 획득했습니다. (결과 ${finalHomeScore}:${finalAwayScore})`;
+    } else {
+      scoreEarned = 0; // 틀림
+      resultMessage = `[아쉽습니다] 예측에 실패했습니다. (결과 ${finalHomeScore}:${finalAwayScore})`;
     }
 
-    // 3. 게임 참여 로직
-    function joinGame() {
-        const nickname = document.getElementById('nickname').value;
-        const score = document.getElementById('score').value;
+    // 유저 점수 업데이트
+    await db.query("UPDATE users SET total_score = total_score + ? WHERE id = ?", [scoreEarned, pred.user_id]);
 
-        if(!nickname || !score) {
-            alert("닉네임과 스코어를 모두 입력해주세요!");
-            return;
-        }
-
-        // 공백 제거 정렬 (예: "2 : 1" -> "2:1")
-        const formattedScore = score.replace(/\s+/g, '');
-
-        participants.push({ nickname, score: formattedScore });
-        document.getElementById('nickname').value = '';
-        document.getElementById('score').value = '';
-        updateUI();
-        alert(`[${nickname}]님, [${formattedScore}] 예측 완료!`);
-    }
-
-    // 4. 스코어별 그룹화 및 배당률 UI 업데이트 (요청 반영)
-    function updateUI() {
-        const totalUsers = participants.length;
-        document.getElementById('user-count').innerText = totalUsers;
-        const oddsContainer = document.getElementById('odds-container');
-        oddsContainer.innerHTML = '';
-
-        if(totalUsers === 0) return;
-
-        // 스코어별로 참여자 닉네임을 배열로 묶기
-        const scoreGroups = {};
-        participants.forEach(p => {
-            if (!scoreGroups[p.score]) {
-                scoreGroups[p.score] = [];
-            }
-            scoreGroups[p.score].push(p.nickname);
-        });
-
-        // 화면에 스코어와 참여자 명단 표시
-        for (const [score, names] of Object.entries(scoreGroups)) {
-            const count = names.length;
-            const odds = (totalUsers / count).toFixed(1);
-            const nameListStr = names.join(", "); // 참여자1, 참여자2 형식으로 연결
-
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <div>
-                    <span class="score-badge">${score}</span>
-                    <span class="user-names">${nameListStr}</span>
-                </div>
-                <div>
-                    <b style="color:#007aff">${odds}배</b>
-                </div>
-            `;
-            oddsContainer.appendChild(li);
-        }
-    }
-
-    // 5. 경기 종료 로직
-    function endGame() {
-        if(participants.length === 0) {
-            alert("참가자가 없습니다.");
-            return;
-        }
-
-        const actualScore = prompt("실제 종료된 스코어를 입력하세요 (예: 2:1)", "2:1");
-        if(!actualScore) return;
-
-        const scoreGroups = {};
-        participants.forEach(p => {
-            if (!scoreGroups[p.score]) scoreGroups[p.score] = [];
-            scoreGroups[p.score].push(p.nickname);
-        });
-
-        const winners = participants.filter(p => p.score === actualScore);
-        const totalUsers = participants.length;
-
-        if(winners.length > 0) {
-            const odds = (totalUsers / scoreGroups[actualScore].length).toFixed(1);
-            let winnerNames = winners.map(w => w.nickname).join(", ");
-            let message = `⚽ ${matchName} 스코어 맞추기 결과\n\n`;
-            message += `${winnerNames}님, 축하합니다! 예측하신 스코어가 적중하여 이번 게임의 우승자가 되셨습니다.\n\n`;
-            message += `* 최종 스코어: ${actualScore}\n`;
-            message += `* 나의 선택: ${actualScore} (${odds}배)\n\n`;
-            message += `친구들에게 나의 승리를 자랑하세요!`;
-
-            alert(message);
-        } else {
-            alert(`⚽ ${matchName} 결과\n최종 스코어는 [${actualScore}] 입니다.\n아쉽게도 정답자가 없습니다!`);
-        }
-    }
-</script>
-
-</body>
-</html>
+    // 3. 카카오톡 알림톡 발송 요청 (예시 템플릿 호출)
+    await sendKakaoAlimtalk({
+      phoneNumber: pred.user_phone,
+      templateCode: "MATCH_RESULT_ALERT",
+      parameters: {
+        "userName": pred.user_name,
+        "matchName": pred.match_name,
+        "result": resultMessage,
+        "totalScore": pred.current_total + scoreEarned
+      }
+    });
+  }
+}
