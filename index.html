@@ -1,159 +1,53 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>우리들만의 2026 월드컵 스코어 맞추기</title>
-    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.1/kakao.min.js" integrity="sha384-6e099661uc1m3683fba11b8b6a37e90f23b2c2199b5ff7a911aef71ccf8f62f3" crossorigin="anonymous"></script>
-    <style>
-        body { font-family: 'Malgun Gothic', sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1, h2 { text-align: center; color: #1a237e; }
-        .match-card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 20px; background: #fafafa; }
-        .team-select { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        select, input { padding: 8px; font-size: 16px; border-radius: 4px; border: 1px solid #ccc; }
-        .info-box { background: #e3f2fd; padding: 12px; border-radius: 6px; font-size: 14px; line-height: 1.6; margin-bottom: 15px; border-left: 5px solid #2196f3; }
-        .predict-section { display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 15px; }
-        .predict-section input { width: 50px; text-align: center; }
-        button { width: 100%; padding: 12px; background: #fee500; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; color: #191919; }
-        button:hover { background: #fada0a; }
-        .result-btn { background: #4caf50; color: white; }
-        .result-btn:hover { background: #43a047; }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <h1>🏆 프렌즈 월드컵 리그 🏆</h1>
-    <p style="text-align:center; color:#666;">우리끼리 즐기는 스코어 맞추기 게임</p>
-    
-    <div class="match-card">
-        <h2>경기 선택 및 전문가 데이터</h2>
-        <div class="team-select">
-            <select id="matchSelector" onchange="updateMatchInfo()">
-                <option value="match1">대한민국 vs 포르투갈</option>
-                <option value="match2">브라질 vs 아르헨티나</option>
-            </select>
-        </div>
-
-        <div class="info-box" id="infoBox">
-            </div>
-
-        <hr>
-
-        <h2>1. 내 예측 점수 입력하기</h2>
-        <div class="predict-section">
-            <span id="homeTeamName">대한민국</span>
-            <input type="number" id="homeScore" min="0" value="0">
-            <span>:</span>
-            <input type="number" id="awayScore" min="0" value="0">
-            <span id="awayTeamName">포르투갈</span>
-        </div>
-        <input type="text" id="userName" placeholder="이름을 입력하세요(예: 홍길동)" style="width:96%; margin-top:15px;">
-        <button onclick="sharePrediction()">💬 카톡으로 내 예측 링크 보내기</button>
-    </div>
-
-    <div class="match-card" style="border-top: 4px solid #4caf50;">
-        <h2>2. [주관자 전용] 최종 결과 통보</h2>
-        <p style="font-size:12px; color:#666; text-align:center;">경기가 끝난 후 실제 스코어를 입력해 친구들에게 공유하세요.</p>
-        <div class="predict-section">
-            <span id="resHomeName">대한민국</span>
-            <input type="number" id="actualHomeScore" min="0" value="0">
-            <span>:</span>
-            <input type="number" id="actualAwayScore" min="0" value="0">
-            <span id="resAwayName">포르투갈</span>
-        </div>
-        <button class="result-btn" onclick="shareFinalResult()">📢 카톡으로 최종 결과 알리기</button>
-    </div>
-</div>
-
-<script>
-    // 카카오 개발자 센터에서 발급받은 자바스크립트 키를 입력하세요.
-    // (키가 없어도 시스템 기본 공유 기능이 작동하도록 예외처리 해두었습니다.)
-    try {
-        Kakao.init('YOUR_KAKAO_JAVASCRIPT_KEY'); 
-    } catch(e) { console.log("카카오 키 미설정"); }
-
-    // 경기별 고정 데이터 (과거 전적, 전문가 예측, 주요 선수 소속)
-    const matchData = {
-        match1: {
-            home: "대한민국", away: "포르투갈",
-            history: "최근 상대 전적: 1승 0패 (2022 월드컵 2:1 승)",
-            expert: "전문가 예측: 포르투갈 우세 (승률 58%), 예상 스코어 1:2",
-            players: "주요 선수: 손흥민(토트넘), 이강인(PSG) / 호날두(알 나스르), 브루노(맨유)"
-        },
-        match2: {
-            home: "브라질", away: "아르헨티나",
-            history: "최근 상대 전적: 2승 1무 2패 (치열한 백중세)",
-            expert: "전문가 예측: 무승부 확률 높음 (승률 35%), 예상 스코어 1:1",
-            players: "주요 선수: 비니시우스(레알 마드리드) / 메시(마이애미), 맥 알리스터(리버풀)"
-        }
-    };
-
-    // 선택한 경기에 따라 상단 정보 업데이트
-    function updateMatchInfo() {
-        const selected = document.getElementById("matchSelector").value;
-        const data = matchData[selected];
+// 카카오톡 공유 공식 연동 및 연결 링크 발송 함수
+function sendMessage(text, isResult = false) {
+    // ⚠️ 중요: 카카오 개발자 센터에서 발급받은 본인의 '자바스크립트 키'를 꼭 입력해야 작동합니다.
+    // 키가 정상 등록되어 있고, 카카오 SDK가 연결되었을 때 실행됩니다.
+    if (typeof Kakao !== 'undefined' && Kakao.isInitialized()) {
         
-        document.getElementById("homeTeamName").innerText = data.home;
-        document.getElementById("awayTeamName").innerText = data.away;
-        document.getElementById("resHomeName").innerText = data.home;
-        document.getElementById("resAwayName").innerText = data.away;
+        // 현재 이 웹페이지의 주소를 자동으로 가져옵니다. 
+        // (나중에 서버나 Github Pages 등에 올렸을 때 해당 주소로 친구들이 접속하게 됩니다.)
+        const currentUrl = window.location.href; 
 
-        document.getElementById("infoBox").innerHTML = `
-            <strong>📊 경기 미리보기</strong><br>
-            • ${data.history}<br>
-            • ${data.expert}<br>
-            • ${data.players}
-        `;
-    }
-
-    // 1. 참여자가 자기 예측을 방장이나 단톡방에 보낼 때
-    function sharePrediction() {
-        const selected = document.getElementById("matchSelector").value;
-        const data = matchData[selected];
-        const name = document.getElementById("userName").value || "무명회원";
-        const homeS = document.getElementById("homeScore").value;
-        const awayS = document.getElementById("awayScore").value;
-
-        const message = `⚽ [월드컵 스코어 예측 제출]\n\n👤 참여자: ${name}\n⚔️ 경기: ${data.home} vs ${data.away}\n🔮 나의 예측: ${homeS} : ${awayS}\n\n과연 정답을 맞출 수 있을까요?`;
-
-        sendMessage(message);
-    }
-
-    // 2. 주관자가 경기 종료 후 최종 스코어를 단톡방에 공지할 때
-    function shareFinalResult() {
-        const selected = document.getElementById("matchSelector").value;
-        const data = matchData[selected];
-        const homeS = document.getElementById("actualHomeScore").value;
-        const awayS = document.getElementById("actualAwayScore").value;
-
-        const message = `📢 [월드컵 경기 결과 공지]\n\n⚔️ 대상 경기: ${data.home} vs ${data.away}\n정답 스코어 👉 [ ${homeS} : ${awayS} ]\n\n다들 점수 계산해보세요! 스코어 적중은 3점, 승무패 적중은 1점입니다!`;
-
-        sendMessage(message);
-    }
-
-    // 카카오톡 공유 또는 일반 공유 실행 함수
-    function sendMessage(text) {
-        if (typeof Kakao !== 'undefined' && Kakao.isInitialized()) {
-            // 카카오톡 링크 발송 (템플릿 설정이 필요하므로 소규모 친목용은 기본 텍스트 공유로 폴백 가능)
-            navigator.share({ title: '월드컵 게임', text: text });
-        } else if (navigator.share) {
-            // 모바일 브라우저 자체 공유 기능 활성화 (카톡, 문자 모두 선택 가능)
-            navigator.share({
-                title: '월드컵 스코어 게임',
-                text: text
-            }).catch(console.error);
+        Kakao.Share.sendDefault({
+            objectType: 'text',
+            text: text,
+            link: {
+                mobileWebUrl: currentUrl,
+                webUrl: currentUrl,
+            },
+            buttons: [
+                {
+                    title: isResult ? '정답 확인 및 점수 보기' : '나도 스코어 예측하기',
+                    link: {
+                        mobileWebUrl: currentUrl,
+                        webUrl: currentUrl,
+                    },
+                },
+            ],
+        });
+    } else {
+        // PC 브라우저이거나 카카오 키 설정이 안 되었을 때의 기존 폴백(Fallback) 로직
+        if (navigator.share) {
+            navigator.share({ title: '월드컵 스코어 게임', text: text + `\n\n링크: ${window.location.href}` })
+                .catch(console.error);
         } else {
-            // PC 브라우저용 클립보드 복사 폴백
-            navigator.clipboard.writeText(text);
-            alert("텍스트가 클립보드에 복사되었습니다! 단톡방이나 문자에 붙여넣기(Ctrl+V) 하세요.\n\n" + text);
+            navigator.clipboard.writeText(text + `\n\n링크: ${window.location.href}`);
+            alert("텍스트와 링크가 클립보드에 복사되었습니다! 단톡방에 붙여넣기(Ctrl+V) 하세요.");
         }
     }
+}
 
-    // 초기 실행
-    updateMatchInfo();
-</script>
+// 상단 sharePrediction() 함수와 shareFinalResult() 내부의 sendMessage 호출부도 아래처럼 살짝 변경해줍니다.
+function sharePrediction() {
+    // ... (기존 변수 정의 코드 동일) ...
+    const message = `⚽ [월드컵 스코어 예측 제출]\n\n👤 참여자: ${name}\n⚔️ 경기: ${data.home} vs ${data.away}\n🔮 나의 예측: ${homeS} : ${awayS}\n\n과연 정답을 맞출 수 있을까요?`;
+    
+    sendMessage(message, false); // false를 넘겨 '나도 예측하기' 버튼 활성화
+}
 
-</body>
-</html>
+function shareFinalResult() {
+    // ... (기존 변수 정의 코드 동일) ...
+    const message = `📢 [월드컵 경기 결과 공지]\n\n⚔️ 대상 경기: ${data.home} vs ${data.away}\n정답 스코어 👉 [ ${homeS} : ${awayS} ]\n\n다들 점수 계산해보세요!`;
+    
+    sendMessage(message, true); // true를 넘겨 '정답 확인' 버튼 활성화
+}
