@@ -1,37 +1,70 @@
-// 1. 경기 결과가 업데이트되었을 때 실행되는 정산 및 알림 함수
+// 경기 결과가 업데이트되었을 때 실행되는 정산 및 알림 함수
 async function settleMatchAndNotify(matchId, finalHomeScore, finalAwayScore) {
-  // DB에서 해당 경기를 예측한 유저들과 그들의 예측 스코어 가져오기
-  const predictions = await db.query("SELECT * FROM predictions WHERE match_id = ?", [matchId]);
-  
-  for (let pred of predictions) {
-    let scoreEarned = 0;
-    let resultMessage = "";
+  try {
+    // 1. DB에서 해당 경기를 예측한 유저 정보와 현재 총점을 JOIN으로 한 번에 가져오기
+    const queryStr = `
+      SELECT p.*, u.user_phone, u.user_name, u.total_score AS current_total 
+      FROM predictions p
+      JOIN users u ON p.user_id = u.id
+      WHERE p.match_id = ?
+    `;
+    const predictions = await db.query(queryStr, [matchId]);
+    
+    if (predictions.length === 0) return;
 
-    // 2. 점수 계산 로직
-    if (pred.home_score === finalHomeScore && pred.away_score === finalAwayScore) {
-      scoreEarned = 3; // 스코어 정확히 맞춤 (대박)
-      resultMessage = `[적중] 스코어(${finalHomeScore}:${finalAwayScore})를 정확히 맞추어 3점을 획득했습니다!`;
-    } else if (Math.sign(pred.home_score - pred.away_score) === Math.sign(finalHomeScore - finalAwayScore)) {
-      scoreEarned = 1; // 승무패만 맞춤
-      resultMessage = `[절반의 성공] 승패를 맞추어 1점을 획득했습니다. (결과 ${finalHomeScore}:${finalAwayScore})`;
-    } else {
-      scoreEarned = 0; // 틀림
-      resultMessage = `[아쉽습니다] 예측에 실패했습니다. (결과 ${finalHomeScore}:${finalAwayScore})`;
+    // 비동기 작업들을 모아서 한 번에 처리하기 위한 배열
+    const dbPromises = [];
+    const alarmPromises = [];
+
+    const finalSign = Math.sign(finalHomeScore - finalAwayScore);
+
+    for (let pred of predictions) {
+      let scoreEarned = 0;
+      let resultMessage = "";
+
+      // 2. 점수 계산 로직
+      if (pred.home_score === finalHomeScore && pred.away_score === finalAwayScore) {
+        scoreEarned = 3; // 스코어 적중
+        resultMessage = `[적중] 스코어(${finalHomeScore}:${finalAwayScore})를 정확히 맞춰 3점을 획득했습니다!`;
+      } else if (Math.sign(pred.home_score - pred.away_score) === finalSign) {
+        scoreEarned = 1; // 승무패 적중
+        resultMessage = `[절반의 성공] 승패를 맞춰 1점을 획득했습니다. (결과 ${finalHomeScore}:${finalAwayScore})`;
+      } else {
+        scoreEarned = 0; // 낙첨
+        resultMessage = `[아쉽습니다] 예측에 실패했습니다. (결과 ${finalHomeScore}:${finalAwayScore})`;
+      }
+
+      // 3. 유저 점수 업데이트 쿼리를 배열에 push (기다리지 않고 바로 다음 루프)
+      if (scoreEarned > 0) {
+        dbPromises.push(
+          db.query("UPDATE users SET total_score = total_score + ? WHERE id = ?", [scoreEarned, pred.user_id])
+        );
+      }
+
+      // 4. 알림톡 발송 함수를 배열에 push
+      alarmPromises.push(
+        sendKakaoAlimtalk({
+          phoneNumber: pred.user_phone,
+          templateCode: "MATCH_RESULT_ALERT",
+          parameters: {
+            "userName": pred.user_name,
+            "matchName": pred.match_name,
+            "result": resultMessage,
+            "totalScore": pred.current_total + scoreEarned
+          }
+        }).catch(err => console.error(`알림톡 발송 실패 (${pred.user_name}):`, err)) 
+        // 알림톡 하나 실패해도 다른 사람들은 정상 발송되도록 예외처리
+      );
     }
 
-    // 유저 점수 업데이트
-    await db.query("UPDATE users SET total_score = total_score + ? WHERE id = ?", [scoreEarned, pred.user_id]);
+    // 5. 모든 DB 업데이트와 알림톡 발송을 병렬(Parallel)로 동시에 실행
+    await Promise.all(dbPromises);
+    await Promise.all(alarmPromises);
 
-    // 3. 카카오톡 알림톡 발송 요청 (예시 템플릿 호출)
-    await sendKakaoAlimtalk({
-      phoneNumber: pred.user_phone,
-      templateCode: "MATCH_RESULT_ALERT",
-      parameters: {
-        "userName": pred.user_name,
-        "matchName": pred.match_name,
-        "result": resultMessage,
-        "totalScore": pred.current_total + scoreEarned
-      }
-    });
+    console.log(`경기 ${matchId} 정산 및 알림 발송 완료!`);
+
+  } catch (error) {
+    console.error("정산 중 오류 발생:", error);
+    // 필요 시 롤백(Rollback) 로직 추가
   }
 }
