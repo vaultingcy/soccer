@@ -1,6 +1,6 @@
 // 경기 결과 정산 및 알림 함수
 async function settleMatchAndNotify(matchId, finalHomeScore, finalAwayScore) {
-  // 1. 트랜잭션 시작 (DB 연결 객체 가정)
+  // 1. DB 커넥션 확보 및 트랜잭션 시작
   const connection = await db.getConnection();
   await connection.beginTransaction();
 
@@ -38,7 +38,7 @@ async function settleMatchAndNotify(matchId, finalHomeScore, finalAwayScore) {
         resultMessage = `[아쉽습니다] 예측에 실패했습니다. (결과 ${finalHomeScore}:${finalAwayScore})`;
       }
 
-      // 3. 점수 변동이 있을 때만 DB 업데이트 수행 (트랜잭션 내에서 안전하게 차례대로 반영)
+      // 3. 점수 변동이 있을 때만 트랜잭션 내에서 안전하게 DB 업데이트 수행
       if (scoreEarned > 0) {
         await connection.query(
           "UPDATE users SET total_score = total_score + ? WHERE id = ?", 
@@ -46,7 +46,7 @@ async function settleMatchAndNotify(matchId, finalHomeScore, finalAwayScore) {
         );
       }
 
-      // 4. 알림톡 발송 데이터 수집 (외부 API 호출은 DB 트랜잭션이 성공한 뒤에 보냅니다)
+      // 4. 알림톡 발송 데이터 수집 (외부 API 호출은 DB 처리가 완전히 끝난 후 실행)
       alarmList.push({
         phoneNumber: pred.user_phone,
         templateCode: "MATCH_RESULT_ALERT",
@@ -59,10 +59,10 @@ async function settleMatchAndNotify(matchId, finalHomeScore, finalAwayScore) {
       });
     }
 
-    // 5. DB 반영 확정 (모든 유저 점수 수정이 성공했을 때만 적용)
+    // 5. DB 반영 확정 (모든 유저 점수 수정이 성공했을 때만 최종 적용)
     await connection.commit();
 
-    // 6. 비동기로 알림톡 발송 (DB 처리가 끝난 후 병렬 처리하여 대기 시간 축소)
+    // 6. 비동기로 알림톡 발송 (Promise.all을 활용해 병렬 처리하여 대기 시간 대폭 축소)
     Promise.all(
       alarmList.map(alarmData => 
         sendKakaoAlimtalk(alarmData).catch(err => 
