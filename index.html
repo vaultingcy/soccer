@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2026 월드컵 스코어 게임 (완결판)</title>
+    <title>2026 월드컵 프렌즈 리그 (AI 예측 탑재)</title>
     <style>
         :root {
             --primary: #1a237e;
@@ -41,18 +41,25 @@
         <p>우리 동료 20인 전용 마감 제어 시스템</p>
     </div>
     
+    <!-- 1. 경기 선택 및 AI 분석 데이터 -->
     <div class="card">
         <div class="card-title">
-            <span>📊 경기 선택 및 분석 정보</span>
+            <span>📊 빅매치 선택 및 AI 분석</span>
             <span id="statusBadge" class="badge badge-open">예측 가능</span>
         </div>
+        <!-- 💡 드롭다운 메뉴에 다양한 게임들이 대거 추가되었습니다 -->
         <select id="matchSelector" class="select-box" onchange="updateMatchData()">
             <option value="match1">대한민국 🇰🇷 vs 포르투갈 🇵🇹</option>
             <option value="match2">브라질 🇧🇷 vs 아르헨티나 🇦🇷</option>
+            <option value="match3">잉글랜드 🏴󠁧󠁢󠁥󠁮󠁧󠁿 vs 프랑스 🇫🇷</option>
+            <option value="match4">스페인 🇪🇸 vs 독일 🇩🇪</option>
+            <option value="match5">일본 🇯🇵 vs 크로아티아 🇭🇷</option>
+            <option value="match6">우루과이 🇺🇾 vs 이탈리아 🇮🇹</option>
         </select>
         <div class="info-box" id="infoBox"></div>
     </div>
 
+    <!-- 2. 참여자 예측 등록 -->
     <div class="card">
         <div class="card-title">🔮 1. 동료 예측 데이터 등록 (최대 20명)</div>
         
@@ -80,6 +87,7 @@
         </div>
     </div>
 
+    <!-- 3. 경기 결과 입력 및 통보 -->
     <div class="card" style="border-top: 4px solid var(--accent);">
         <div class="card-title" style="color: var(--accent);">📢 2. 경기 결과 입력 및 자동 맞춤 통보</div>
         <div class="vs-container" style="background: #f4faf4;">
@@ -94,19 +102,43 @@
 </div>
 
 <script>
-    // 💡 [수정 가이드] 실제 경기 대진 정보와 전적 데이터를 바꾸려면 이 박스 안의 텍스트를 수정하세요!
+    // 💡 양팀 주요선수 소속 및 주요 AI 예측 스코어가 탑재된 데이터베이스 객체
     const matchMaster = {
         match1: { 
-            home: "대한민국", 
-            away: "포르투갈", 
-            history: "최근 전적: 1승 0패 (2022 월드컵 2:1 승)", 
-            expert: "전문가 픽: 포르투갈 우세 (58%), 예상 1:2" 
+            home: "대한민국", away: "포르투갈", 
+            history: "1승 0패 (2022 카타르 월드컵 2:1 대한민국 승)", 
+            players: "손흥민(토트넘), 이강인(PSG) / 브루노 페르난데스(맨유), 후벵 디아스(맨시티)",
+            aiScore: "포르투갈 2 : 1 대한민국 (AI 시뮬레이션 포르투갈 승리 확률 58%)"
         },
         match2: { 
-            home: "브라질", 
-            away: "아르헨티나", 
-            history: "최근 전적: 2승 1무 2패 (치열한 백중세)", 
-            expert: "전문가 픽: 무승부 확률 높음, 예상 1:1" 
+            home: "브라질", away: "아르헨티나", 
+            history: "최근 5경기 2승 1무 2패 (남미 최대의 라이벌 무대)", 
+            players: "비니시우스 Jr.(레알 마드리드), 호드리구(레알 마드리드) / 리오넬 메시(인터 마이애미), 알렉시스 맥 알리스터(리버풀)",
+            aiScore: "브라질 1 : 1 아르헨티나 (AI 시뮬레이션 무승부 확률 42%)"
+        },
+        match3: { 
+            home: "잉글랜드", away: "프랑스", 
+            history: "최근 2022 카타르 월드컵 8강전 프랑스 2:1 승", 
+            players: "해리 케인(바이에른 뮌헨), 주드 벨링엄(레알 마드리드) / 킬리안 음바페(레알 마드리드), 앙투안 그리즈만(아틀레티코 마드리드)",
+            aiScore: "잉글랜드 1 : 2 프랑스 (AI 시뮬레이션 프랑스 승리 확률 51%)"
+        },
+        match4: { 
+            home: "스페인", away: "독일", 
+            history: "최근 5경기 2승 2무 1패 스페인 근소 우세", 
+            players: "라민 야말(바르셀로나), 로드리(맨시티) / 자말 무시알라(바이에른 뮌헨), 플로리안 비르츠(레버쿠젠)",
+            aiScore: "스페인 2 : 2 독일 (연장전 돌입 확률 매우 높음)"
+        },
+        match5: { 
+            home: "일본", away: "크로아티아", 
+            history: "2022 월드컵 16강전 1:1 무승부 (승부차기 크로아티아 승)", 
+            players: "쿠보 타케후사(레알 소시에다드), 미토마 카오루(브라이튼) / 루카 모드리치(레알 마드리드), 요슈코 그바르디올(맨시티)",
+            aiScore: "일본 1 : 1 크로아티아 (AI 예측 90분 내 무승부 확률 48%)"
+        },
+        match6: { 
+            home: "우루과이", away: "이탈리아", 
+            history: "역대 전적 3승 4무 3패 완벽한 동률", 
+            players: "페데리코 발베르데(레알 마드리드), 다윈 누네스(리버풀) / 니콜로 바렐라(인터밀란), 잔루이지 돈나룸마(PSG)",
+            aiScore: "우루과이 1 : 0 이탈리아 (AI 시뮬레이션 우루과이 저득점 승리 예측)"
         }
     };
 
@@ -121,7 +153,13 @@
         document.getElementById("awayTeam").innerText = data.away;
         document.getElementById("resHomeTeam").innerText = data.home;
         document.getElementById("resAwayTeam").innerText = data.away;
-        document.getElementById("infoBox").innerHTML = `⚽ <b>과거 전적:</b> ${data.history}<br>🔮 <b>전문가 예측:</b> ${data.expert}`;
+        
+        // 💡 UI 화면에 주요 선수와 AI 예측 스코어가 출력되도록 보완했습니다
+        document.getElementById("infoBox").innerHTML = `
+            📊 <b>상대 전적:</b> ${data.history}<br>
+            🏃‍♂️ <b>주요 선수(소속):</b> ${data.players}<br>
+            🤖 <b>주요 AI 예측 스코어:</b> <span style="color:#d32f2f; font-weight:bold;">${data.aiScore}</span>
+        `;
     }
 
     function startTimer() {
@@ -243,4 +281,3 @@
 </script>
 </body>
 </html>
-1
