@@ -3,257 +3,183 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>우리끼리 2026 월드컵 스코어</title>
+    <title>2026 월드컵 스코어 게임 (완결판)</title>
     <style>
-        /* 모바일 및 태블릿 최적화 스타일 (App 느낌의 UX) */
         :root {
-            --primary-color: #1a237e;
-            --accent-color: #4caf50;
-            --bg-color: #f7f9fc;
-            --card-bg: #ffffff;
+            --primary: #1a237e;
+            --accent: #4caf50;
+            --fail: #e53935;
+            --bg: #f7f9fc;
         }
-        
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif; 
-            background-color: var(--bg-color); 
-            margin: 0; 
-            padding: 16px; 
-            color: #333;
-            -webkit-user-select: none;
-            user-select: none;
-        }
-
-        .app-container { 
-            max-width: 500px; 
-            margin: 0 auto; 
-            background: var(--card-bg); 
-            padding: 20px; 
-            border-radius: 16px; 
-            box-shadow: 0 8px 24px rgba(0,0,0,0.05); 
-        }
-
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif; background-color: var(--bg); margin: 0; padding: 16px; color: #333; }
+        .app-container { max-width: 500px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.05); }
         .header { text-align: center; margin-bottom: 24px; }
-        .header h1 { margin: 0; font-size: 24px; color: var(--primary-color); font-weight: 800; }
-        .header p { margin: 4px 0 0 0; font-size: 13px; color: #777; }
-
-        .card { 
-            border: 1px solid #eef2f5; 
-            padding: 16px; 
-            border-radius: 12px; 
-            margin-bottom: 20px; 
-            background: #fafbfc; 
-        }
-        
-        .card-title { font-size: 16px; font-weight: bold; color: #444; margin-top: 0; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
-
-        .select-box { 
-            width: 100%; 
-            padding: 12px; 
-            font-size: 16px; 
-            border-radius: 8px; 
-            border: 1px solid #ccd6dd; 
-            background-color: #fff;
-            margin-bottom: 12px;
-            font-weight: bold;
-        }
-
-        .info-box { 
-            background: #e8f0fe; 
-            padding: 14px; 
-            border-radius: 8px; 
-            font-size: 13px; 
-            line-height: 1.6; 
-            color: #2b3a4a;
-            border-left: 4px solid #1a73e8; 
-        }
-
-        .vs-container { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            margin: 20px 0;
-            background: #fff;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #f0f2f5;
-        }
-        .team-label { font-size: 15px; font-weight: bold; width: 35%; text-align: center; }
-        .score-input { width: 55px; height: 45px; font-size: 20px; text-align: center; border-radius: 8px; border: 2px solid #ccd6dd; font-weight: bold; }
-        .score-input:focus { border-color: var(--primary-color); outline: none; }
-        .vs-sign { font-weight: bold; color: #999; font-size: 14px; }
-
-        .input-name { 
-            width: 100%; 
-            padding: 12px; 
-            font-size: 15px; 
-            border-radius: 8px; 
-            border: 1px solid #ccd6dd; 
-            box-sizing: border-box;
-            margin-bottom: 16px;
-        }
-
-        .btn { 
-            width: 100%; 
-            padding: 14px; 
-            border: none; 
-            border-radius: 8px; 
-            font-size: 15px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            transition: background 0.2s;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-        }
+        .header h1 { margin: 0; font-size: 22px; color: var(--primary); font-weight: 800; }
+        .card { border: 1px solid #eef2f5; padding: 16px; border-radius: 12px; margin-bottom: 20px; background: #fafbfc; }
+        .card-title { font-size: 15px; font-weight: bold; color: #444; margin-bottom: 12px; }
+        .select-box, .input-name { width: 100%; padding: 12px; font-size: 15px; border-radius: 8px; border: 1px solid #ccd6dd; box-sizing: border-box; margin-bottom: 12px; font-weight: bold; }
+        .info-box { background: #e8f0fe; padding: 12px; border-radius: 8px; font-size: 13px; line-height: 1.6; color: #2b3a4a; border-left: 4px solid #1a73e8; margin-bottom: 12px; }
+        .vs-container { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #f0f2f5; }
+        .team-label { font-size: 14px; font-weight: bold; width: 35%; text-align: center; }
+        .score-input { width: 50px; height: 40px; font-size: 18px; text-align: center; border-radius: 8px; border: 2px solid #ccd6dd; font-weight: bold; }
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 15px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; }
         .btn-share { background: #fee500; color: #191919; }
-        .btn-result { background: var(--accent-color); color: white; margin-top: 10px; }
-        .btn:active { opacity: 0.8; }
+        .btn-result { background: var(--accent); color: white; margin-top: 10px; }
+        .user-list { font-size: 13px; background: #fff; border: 1px solid #eef2f5; padding: 10px; border-radius: 8px; max-height: 120px; overflow-y: auto; margin-top: 8px; }
+        .user-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed #f0f2f5; }
     </style>
 </head>
 <body>
 
 <div class="app-container">
     <div class="header">
-        <h1>🏆 2026 월드컵 프렌즈</h1>
-        <p>우리 팀 동료 전용 스코어 예측기</p>
+        <h1>🏆 2026 월드컵 프렌즈 리그</h1>
+        <p>우리 동료 20인 전용 자동 정산 시스템</p>
     </div>
     
+    <!-- 1. 경기 선택 및 전적 데이터 -->
     <div class="card">
         <div class="card-title">📊 경기 정보 및 전문가 분석</div>
         <select id="matchSelector" class="select-box" onchange="updateMatchData()">
             <option value="match1">대한민국 🇰🇷 vs 포르투갈 🇵🇹</option>
             <option value="match2">브라질 🇧🇷 vs 아르헨티나 🇦🇷</option>
-            <option value="match3">잉글랜드 🏴󠁧󠁢󠁥󠁮󠁧󠁿 vs 프랑스 🇫🇷</option>
         </select>
-        <div class="info-box" id="infoBox">
-            </div>
+        <div class="info-box" id="infoBox"></div>
     </div>
 
+    <!-- 2. 주관자가 동료들의 예측 데이터를 모아서 입력하는 곳 -->
     <div class="card">
-        <div class="card-title">🔮 1. 내 예측 점수 입력</div>
-        <input type="text" id="userName" class="input-name" placeholder="본인의 이름을 입력하세요 (예: 이창엽)">
-        
+        <div class="card-title">🔮 1. 동료 예측 데이터 등록 (최대 20명)</div>
+        <input type="text" id="userName" class="input-name" placeholder="참여자 이름 (예: 이창엽)">
         <div class="vs-container">
             <span class="team-label" id="homeTeam">대한민국</span>
-            <input type="number" id="homeScore" class="score-input" min="0" value="0" oninput="this.value=this.value.replace(/[^0-9]/g,'');">
-            <span class="vs-sign">VS</span>
-            <input type="number" id="awayScore" class="score-input" min="0" value="0" oninput="this.value=this.value.replace(/[^0-9]/g,'');">
+            <input type="number" id="homeScore" class="score-input" min="0" value="0">
+            <span style="color:#999; font-size:12px;">예측</span>
+            <input type="number" id="awayScore" class="score-input" min="0" value="0">
             <span class="team-label" id="awayTeam">포르투갈</span>
         </div>
+        <button class="btn" style="background:#e0e0e0;" onclick="addParticipant()">➕ 참여자 예측 명단에 추가</button>
         
-        <button class="btn btn-share" onclick="sharePrediction()">💬 공유하기 (단톡방/문자 전송)</button>
+        <div class="user-list" id="participantList">
+            <div style="color:#aaa; text-align:center; padding:20px 0;">등록된 참여자가 없습니다.</div>
+        </div>
     </div>
 
-    <div class="card" style="border-top: 3px solid var(--accent-color);">
-        <div class="card-title" style="color: var(--accent-color);">📢 2. [주관자 전용] 결과 공지</div>
+    <!-- 3. 경기 종료 후 주관자가 실제 결과를 입력하고 자동 통보하는 곳 -->
+    <div class="card" style="border-top: 4px solid var(--accent);">
+        <div class="card-title" style="color: var(--accent);">📢 2. 경기 결과 입력 및 자동 맞춤 통보</div>
         <div class="vs-container" style="background: #f4faf4;">
             <span class="team-label" id="resHomeTeam">대한민국</span>
             <input type="number" id="actualHomeScore" class="score-input" min="0" value="0">
-            <span class="vs-sign">실제결과</span>
+            <span style="font-weight:bold; color:var(--accent); font-size:13px;">실제 스코어</span>
             <input type="number" id="actualAwayScore" class="score-input" min="0" value="0">
             <span class="team-label" id="resAwayTeam">포르투갈</span>
         </div>
-        <button class="btn btn-result" onclick="shareFinalResult()">📢 최종 스코어 결과 단톡방 공지</button>
+        <button class="btn btn-result" onclick="settleAndShareAll()">📢 맞춤형 결과 메시지 단톡방 전송</button>
     </div>
 </div>
 
 <script>
-    // 갤럭시 맞춤형 고정 전적 및 전문가 예측 데이터
+    // 경기 데이터 및 전문가 정보
     const matchMaster = {
-        match1: {
-            home: "대한민국", away: "포르투갈",
-            history: "상대 전적: 1승 0패 (2022 카타르 월드컵 2:1 승리)",
-            expert: "전문가 예측: 포르투갈 승리 확률 58%, 예상 스코어 1:2",
-            players: "핵심 소속: 손흥민(토트넘), 이강인(PSG) / 브루노(맨유)"
-        },
-        match2: {
-            home: "브라질", away: "아르헨티나",
-            history: "상대 전적: 최근 5경기 2승 1무 2패 (완벽한 백중세)",
-            expert: "전문가 예측: 무승부 확률 40%, 예상 스코어 1:1 또는 2:2",
-            players: "핵심 소속: 비니시우스(레알) / 메시(마이애미), 맥 알리스터(리버풀)"
-        },
-        match3: {
-            home: "잉글랜드", away: "프랑스",
-            history: "상대 전적: 최근 2022 월드컵 프랑스 2:1 승리",
-            expert: "전문가 예측: 프랑스 미세 우세 (52%), 예상 스코어 0:1",
-            players: "핵심 소속: 해리 케인(바이에른 뮌헨) / 음바페(레알 마드리드)"
-        }
+        match1: { home: "대한민국", away: "포르투갈", history: "최근 전적: 1승 0패 (2022 월드컵 2:1 승)", expert: "전문가 픽: 포르투갈 우세 (58%), 예상 1:2" },
+        match2: { home: "브라질", away: "아르헨티나", history: "최근 전적: 2승 1무 2패 (치열한 백중세)", expert: "전문가 픽: 무승부 확률 높음, 예상 1:1" }
     };
 
-    // 선택 변경 시 데이터 UI 스왑
+    // 참여자 명단 배열 (최대 20명)
+    let participants = [];
+
     function updateMatchData() {
         const selected = document.getElementById("matchSelector").value;
         const data = matchMaster[selected];
-        
         document.getElementById("homeTeam").innerText = data.home;
         document.getElementById("awayTeam").innerText = data.away;
         document.getElementById("resHomeTeam").innerText = data.home;
         document.getElementById("resAwayTeam").innerText = data.away;
-
-        document.getElementById("infoBox").innerHTML = `
-            📌 <b>과거 전적:</b> ${data.history}<br>
-            🔮 <b>전문가 픽:</b> ${data.expert}<br>
-            🏃‍♂️ <b>주요 선수:</b> ${data.players}
-        `;
+        document.getElementById("infoBox").innerHTML = `⚽ <b>과거 전적:</b> ${data.history}<br>🔮 <b>전문가 예측:</b> ${data.expert}`;
     }
 
-    // 갤럭시 통합 모바일 공유 엔진 (내부 카카오톡 키 없이 작동 가능)
-    function launchMobileShare(title, text) {
-        // 현재 열려있는 웹 페이지 링크 주소
-        const currentLink = window.location.href;
-        const fullMessage = `${text}\n\n👇 나도 예측 참여하기 (링크 클릭)\n${currentLink}`;
-
-        // 갤럭시 모바일/태블릿 브라우저 자체 공유 기능 호출
-        if (navigator.share) {
-            navigator.share({
-                title: title,
-                text: fullMessage
-            }).catch(err => {
-                if(err.name !== 'AbortError') useClipboardFallback(fullMessage);
-            });
-        } else {
-            useClipboardFallback(fullMessage);
-        }
-    }
-
-    function useClipboardFallback(text) {
-        navigator.clipboard.writeText(text);
-        alert("예측 데이터와 게임 링크가 클립보드에 복사되었습니다!\n카카오톡 단톡방이나 문자에 '붙여넣기(Ctrl+V)' 해주세요.");
-    }
-
-    // [1. 예측 제출 버튼 클릭시]
-    function sharePrediction() {
-        const selected = document.getElementById("matchSelector").value;
-        const data = matchMaster[selected];
+    // 명단 추가 함수
+    function addParticipant() {
         const name = document.getElementById("userName").value.trim();
-        
-        if(!name) {
-            alert("이름을 입력해야 동료들이 누구인지 식별할 수 있습니다!");
+        if (!name) return alert("참여자 이름을 입력해주세요.");
+        if (participants.length >= 20) return alert("최대 20명까지만 참여 가능합니다.");
+
+        const homeS = parseInt(document.getElementById("homeScore").value) || 0;
+        const awayS = parseInt(document.getElementById("awayScore").value) || 0;
+
+        participants.push({ name: name, home: homeS, away: awayS });
+        document.getElementById("userName").value = ""; // 이름 칸 초기화
+        renderParticipants();
+    }
+
+    // 명단 렌더링
+    function renderParticipants() {
+        const listDiv = document.getElementById("participantList");
+        if (participants.length === 0) {
+            listDiv.innerHTML = '<div style="color:#aaa; text-align:center; padding:20px 0;">등록된 참여자가 없습니다.</div>';
             return;
         }
-
-        const homeS = document.getElementById("homeScore").value;
-        const awayS = document.getElementById("awayScore").value;
-
-        const message = `⚽ [월드컵 스코어 예측 제출]\n\n👤 참여자: ${name}\n⚔️ 경기: ${data.home} vs ${data.away}\n🔮 나의 예측: [ ${homeS} : ${awayS} ]\n\n과연 정답을 맞출 수 있을까요?`;
-        
-        launchMobileShare("월드컵 스코어 게임", message);
+        listDiv.innerHTML = participants.map((p, idx) => `
+            <div class="user-item">
+                <span><b>${p.name}</b></span>
+                <span>[예측] ${p.home} : ${p.away} <span style="color:red; cursor:pointer;" onclick="removeParticipant(${idx})">❌</span></span>
+            </div>
+        `).join('');
     }
 
-    // [2. 주관자 결과 공지 버튼 클릭시]
-    function shareFinalResult() {
+    function removeParticipant(idx) {
+        participants.splice(idx, 1);
+        renderParticipants();
+    }
+
+    // 🏆 결과 정산 및 전체 결과 자동 통보 엔진
+    function settleAndShareAll() {
+        if (participants.length === 0) return alert("정산할 참여자 명단이 없습니다. 먼저 명단을 등록해 주세요.");
+
         const selected = document.getElementById("matchSelector").value;
         const data = matchMaster[selected];
-        const homeS = document.getElementById("actualHomeScore").value;
-        const awayS = document.getElementById("actualAwayScore").value;
+        const actualHome = parseInt(document.getElementById("actualHomeScore").value) || 0;
+        const actualAway = parseInt(document.getElementById("actualAwayScore").value) || 0;
 
-        const message = `📢 [월드컵 경기 결과 공지]\n\n⚔️ 대상 경기: ${data.home} vs ${data.away}\n정답 스코어 👉 [ ${homeS} : ${awayS} ]\n\n다들 점수 확인해보세요!\n(스코어 적중 3점 / 승무패 적중 1점)`;
-        
-        launchMobileShare("월드컵 최종 결과", message);
+        let winners = [];
+        let losers = [];
+
+        // 자동 판별 로직
+        participants.forEach(p => {
+            if (p.home === actualHome && p.away === actualAway) {
+                winners.push(p.name);
+            } else {
+                losers.push(p.name);
+            }
+        });
+
+        // 결과 통보 메시지 조립
+        let message = `📢 [월드컵 경기 최종 결과 공지]\n\n⚔️ 경기: ${data.home} vs ${data.away}\n⚽ 최종 스코어 👉 [ ${actualHome} : ${actualAway} ]\n\n--------------------\n`;
+
+        if (winners.length > 0) {
+            message += `🎉 스코어 적중자 (축하합니다!):\n🥇 ${winners.join(', ')}\n👉 "돋보이는 통찰력! 완벽하게 맞추셨습니다! 축하드려요! 🥳"\n\n`;
+        } else {
+            message += `🎉 스코어 적중자: 없음 😭\n\n`;
+        }
+
+        if (losers.length > 0) {
+            message += `😢 아쉬운 낙첨자:\n🏃‍♂️ ${losers.join(', ')}\n👉 "아쉽네요! 다음 기회에 꼭 맞춰보세요! 화이팅! 🔥"`;
+        }
+
+        // 모바일 갤럭시 통합 공유 시스템 실행
+        if (navigator.share) {
+            navigator.share({
+                title: "월드컵 최종 정산 결과",
+                text: message
+            }).catch(console.error);
+        } else {
+            navigator.clipboard.writeText(message);
+            alert("정산 결과 메시지가 클립보드에 복사되었습니다!\n단톡방이나 문자에 바로 '붙여넣기(Ctrl+V)' 하세요.");
+        }
     }
 
-    // 첫 실행 초기화
+    // 초기화
     updateMatchData();
 </script>
 
